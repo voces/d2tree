@@ -3,7 +3,7 @@
 A [quadtree](https://en.wikipedia.org/wiki/Quadtree) that supports dynamically
 adding, removing, and updating items. Splits dynamically, similar to
 [k-d trees](https://en.wikipedia.org/wiki/K-d_tree). Read the docs on
-[Deno Third Party Modules](https://deno.land/x/d2tree/mod.ts).
+[Deno Third Party Modules](https://deno.land/x/d2tree/mod.ts?s=D2Tree).
 
 # Usage
 
