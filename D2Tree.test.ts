@@ -48,6 +48,53 @@ it("adding, splitting, removing, collapsing", () => {
   expect(toPlainTree(tree)).toEqual({ items: [[-1, 1], [1, -1]] });
 });
 
+it("updating", () => {
+  const tree = new D2Tree({
+    getItemPosition: (p: P) => p,
+    density: 3,
+  });
+  const p1: P = [1, 1];
+  tree.add(p1);
+  tree.add([1, -1]);
+  tree.add([-1, 1]);
+  tree.add([-1, -1]);
+  expect(toPlainTree(tree)).toEqual({
+    items: [],
+    children: [
+      { items: [[-1, -1]] },
+      { items: [[-1, 1]] },
+      { items: [[1, -1]] },
+      { items: [[1, 1]] },
+    ],
+  });
+
+  // Update but not out of cell
+  p1[0] = 0.5;
+  tree.update(p1);
+  expect(toPlainTree(tree)).toEqual({
+    items: [],
+    children: [
+      { items: [[-1, -1]] },
+      { items: [[-1, 1]] },
+      { items: [[1, -1]] },
+      { items: [[0.5, 1]] },
+    ],
+  });
+
+  // Update out of cell
+  p1[0] = -2;
+  tree.update(p1);
+  expect(toPlainTree(tree)).toEqual({
+    items: [],
+    children: [
+      { items: [[-1, -1]] },
+      { items: [[-1, 1], [-2, 1]] },
+      { items: [[1, -1]] },
+      { items: [] },
+    ],
+  });
+});
+
 it("iterateBox/box", () => {
   const tree = new D2Tree({ getItemPosition: (p: P) => p, density: 3 });
   tree.add([-1, -1]);

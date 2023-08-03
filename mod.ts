@@ -28,28 +28,26 @@ export class D2Tree<Item> {
     this.min = _min ?? [-Infinity, -Infinity];
   }
 
-  add(item: Item) {
-    if (!this.children) {
-      if (this.shouldSplit) this.split();
-      else {
-        this.items.push(item);
-        this.itemToTreeMap.set(item, this);
+  /**
+   * Add an item to the tree.
+   */
+  add(item: Item): void {
+    const cell = this.drill(...this.getItemPosition(item));
 
-        return;
-      }
+    if (cell.shouldSplit) {
+      cell.split();
+      cell.add(item);
+      return;
     }
 
-    if (this.children) {
-      const [x, y] = this.getItemPosition(item);
-      if (x < this.center[0]) {
-        if (y < this.center[1]) this.children[0].add(item);
-        else this.children[1].add(item);
-      } else if (y < this.center[1]) this.children[2].add(item);
-      else this.children[3].add(item);
-    }
+    cell.items.push(item);
+    this.itemToTreeMap.set(item, cell);
   }
 
-  remove(item: Item) {
+  /**
+   * Remove an item from the tree.
+   */
+  remove(item: Item): void {
     const container = this.itemToTreeMap.get(item);
     if (!container) return;
     const index = container.items.indexOf(item);
@@ -62,6 +60,27 @@ export class D2Tree<Item> {
     ) container.parent.collapse();
   }
 
+  /**
+   * Update an item's internal location in the tree. Should be called whenever
+   * the item's position changes.
+   */
+  update(item: Item): void {
+    const container = this.itemToTreeMap.get(item);
+    if (!container) return this.add(item);
+    const [x, y] = this.getItemPosition(item);
+    if (
+      x >= container.min[0] &&
+      x < container.max[0] &&
+      y >= container.min[1] &&
+      y < container.max[1]
+    ) return;
+    container.remove(item);
+    this.add(item);
+  }
+
+  /**
+   * Iterate through all items in the tree in no particular order.
+   */
   *[Symbol.iterator]() {
     const remaining: D2Tree<Item>[] = [this];
     while (remaining.length) {
@@ -73,7 +92,16 @@ export class D2Tree<Item> {
     }
   }
 
-  *iterateBox(minX: number, minY: number, maxX: number, maxY: number) {
+  /**
+   * Iterate through items in the tree that fit inside the provided rectangle.
+   * Items are not in any particular order.
+   */
+  *iterateBox(
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+  ): Generator<Item> {
     // Start off the cells with the superstructure
     const cells: D2Tree<Item>[] = [this];
     let cell;
@@ -109,11 +137,19 @@ export class D2Tree<Item> {
     }
   }
 
-  box(minX: number, minY: number, maxX: number, maxY: number) {
+  /**
+   * List all items in the tree that fit inside the provided rectangle. Items
+   * are not in any particular order.
+   */
+  box(minX: number, minY: number, maxX: number, maxY: number): Item[] {
     return Array.from(this.iterateBox(minX, minY, maxX, maxY));
   }
 
-  *iterateRadius(x: number, y: number, radius: number) {
+  /**
+   * Iterate through items in the tree that fat inside the provided circle.
+   * Items are not in any particular order.
+   */
+  *iterateRadius(x: number, y: number, radius: number): Generator<Item> {
     const radiusSquared = radius ** 2;
     const generator = this.iterateBox(
       x - radius,
@@ -127,21 +163,21 @@ export class D2Tree<Item> {
     }
   }
 
-  radius(x: number, y: number, radius: number) {
+  /**
+   * List all items in the tree that fit inside the provided circle. Items are
+   * not in any particular order.
+   */
+  radius(x: number, y: number, radius: number): Item[] {
     return Array.from(this.iterateRadius(x, y, radius));
   }
 
-  *iterateNearest(x: number, y: number) {
+  /**
+   * Iterate through all items in the tree order by distance to the provided
+   * point.
+   */
+  *iterateNearest(x: number, y: number): Generator<Item> {
     const closed = new Set<D2Tree<Item>>();
-    // deno-lint-ignore no-this-alias
-    let cur: D2Tree<Item> | undefined = this;
-    while (this.children) {
-      if (x < this.center[0]) {
-        if (y < this.center[1]) cur = this.children[0];
-        else cur = this.children[1];
-      } else if (y < this.center[1]) cur = this.children[2];
-      else cur = this.children[3];
-    }
+    let cur: D2Tree<Item> | undefined = this.drill(x, y);
     cur = cur.parent?.parent ?? cur.parent ?? cur;
     const memory = new Map<Item, number>();
     const distanceSquared = (item: Item) => {
@@ -169,11 +205,15 @@ export class D2Tree<Item> {
     }
   }
 
+  /**
+   * List all items in the tree order by distance to the provided point. Provide
+   * `count` to list only the `count` nearest items.
+   */
   nearest(
     x: number,
     y: number,
     count = 1,
-  ) {
+  ): Item[] {
     const arr: Item[] = [];
     const generator = this.iterateNearest(x, y);
     while (arr.length < count) {
@@ -203,6 +243,15 @@ export class D2Tree<Item> {
       if (x !== itemX || y !== itemY) return true;
     }
     return false;
+  }
+
+  private drill(x: number, y: number): D2Tree<Item> {
+    if (!this.children) return this;
+    if (x < this.center[0]) {
+      if (y < this.center[1]) return this.children[0].drill(x, y);
+      else return this.children[1].drill(x, y);
+    } else if (y < this.center[1]) return this.children[2].drill(x, y);
+    else return this.children[3].drill(x, y);
   }
 
   private split() {

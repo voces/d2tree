@@ -1,6 +1,8 @@
 # d2tree
 
-A 2-D [K-d tree](https://en.wikipedia.org/wiki/K-d_tree).
+A [quadtree](https://en.wikipedia.org/wiki/Quadtree) that supports dynamically
+adding, removing, and updating items. Splits dynamically, similar to
+[k-d trees](https://en.wikipedia.org/wiki/K-d_tree).
 
 # Usage
 
